@@ -1,0 +1,12 @@
+[9252]  warn @0.243520> [hit #1] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[10788]  warn @0.171804> [hit #1] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[10788]  warn @0.110866> [hit #3] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[11020]  warn @0.351746> [hit #1] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[10708]  warn @0.221400> [hit #1] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[2404]  warn @0.131097> [hit #1] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[2892]  warn @0.122223> [hit #1] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[2892]  warn @0.017175> [hit #3] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[3976]  warn @0.005119> [hit #1] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[1636]  warn @0.004855> [hit #1] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[292]  warn @0.246720> [hit #1] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228
+[3228]  warn @0.120629> [hit #1] Dancer::Logger in C:/strawberry/perl/site/lib/Dancer/Route.pm l. 228

@@ -1,0 +1,63 @@
+Oogly-Aagly - A form building, processing and data validation system!
+
+Oogly-Aagly is basically form building on top of the Oogly data validation
+framework. This means that existing packages and code using Oogly can be easily
+converted to utilize this new functionality.
+
+The following is an example of that...
+
+    use MyApp::FormFu;
+    my $form = MyApp::FormFu->new(\%params);
+    my @flds = qw/search/;
+    if ($form->validate(@flds)){
+        ...
+    }
+    else {
+	print $form->render('form_name', '/url', @flds);
+    }
+
+    package MyApp::FormFu;
+    use Oogly::Aagly;
+
+    # cpan and see Oogly for all the gritty details ...
+    field 'search' => {
+        label => 'user search',
+        error => 'your search must contain a valid id number',
+	element => {
+	    type => 'input',
+	    template => ''
+	},
+        validation => sub {
+            my ($form, $field, $params) = @_;
+            $form->error($field, $field->{error})
+                if $field->{value} =~ /\D/;
+        }
+    };
+
+INSTALLATION
+
+To install this module using code from CPAN,
+run the following commands
+
+	perl Makefile.PL
+	make
+	make test
+	make install
+
+To install this module using code from the git repository,
+run the following commands (Dist::Zilla required):
+
+  dzil build
+  cd Oogly-Aagly-#.##
+  cpan .
+
+REPOSITORY
+
+    http://github.com/awnstudio/Oogly-Aagly/
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2010 Al Newkirk
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
