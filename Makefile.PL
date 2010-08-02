@@ -26,9 +26,10 @@ my %WriteMakefileArgs = (
     'Data::Dumper' => '2.126',
     'File::Copy' => '0',
     'File::ShareDir' => '0',
+    'Oogly' => '0.21',
     'Template' => '0'
   },
-  'VERSION' => '0.02',
+  'VERSION' => '0.03',
   'test' => {
     'TESTS' => 't/*.t'
   }

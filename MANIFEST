@@ -3,6 +3,7 @@ MANIFEST
 META.yml
 Makefile.PL
 README
+TODO
 dist.ini
 eg/dancer-app/Test/Makefile.PL
 eg/dancer-app/Test/Test.pl

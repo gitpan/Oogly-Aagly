@@ -1,5 +1,5 @@
-<form id="[% name %]" name="[% name %]" action="[% url %]" method="post">
+<form id="form_[% name %]" name="form_[% name %]" action="[% url %]" method="post">
     [% content %]
-    <input type="submit" value="Submit">&nbsp;
+    <input type="submit" value="[% name FILTER ucfirst %]">&nbsp;
     <input type="reset" value="Reset">&nbsp;
 </form>

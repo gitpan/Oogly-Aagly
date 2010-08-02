@@ -17,5 +17,6 @@ requires:
   Data::Dumper: 2.126
   File::Copy: 0
   File::ShareDir: 0
+  Oogly: 0.21
   Template: 0
-version: 0.02
+version: 0.03
