@@ -1,4 +1,6 @@
 package Oogly-Aagly
-summary A form building, processing and data validation system!
+summary A form building, processing and data validation system based on Oogly!
 version 0.03
         - completely refactored
+version 0.04
+        - updated to support the new Oogly

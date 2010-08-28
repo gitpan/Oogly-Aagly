@@ -1,4 +1,0 @@
-    <label>[% IF field.label %][% field.label %][% ELSE %][% field.name %][% END %][% IF form.error(field.$name) %] - [% form.error(field.$name) %][% END %]</label>
-    <textarea id="[% field.name %]" name="[% field.name %]">
-    [% form.params.$this || field.value %]
-    </textarea>

@@ -1,5 +1,0 @@
-<form id="[% name %]" name="[% name %]" action="[% url %]" method="post">
-    [% content %]
-    <input type="submit" value="Submit">&nbsp;
-    <input type="reset" value="Reset">&nbsp;
-</form>

@@ -1,4 +1,4 @@
-Oogly-Aagly - A form building, processing and data validation system!
+Oogly-Aagly - A form building, processing and data validation system based on Oogly!
 
 Oogly-Aagly is basically form building on top of the Oogly data validation
 framework. This means that existing packages and code using Oogly can be easily

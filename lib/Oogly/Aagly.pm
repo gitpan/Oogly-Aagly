@@ -1,8 +1,8 @@
 package Oogly::Aagly;
 BEGIN {
-  $Oogly::Aagly::VERSION = '0.03';
+  $Oogly::Aagly::VERSION = '0.04';
 }
-# ABSTRACT: A form building, processing and data validation system!
+# ABSTRACT: A form building, processing and data validation system based on Oogly!
 
 use strict;
 use warnings;
@@ -11,9 +11,9 @@ use File::ShareDir ':ALL';
 use Template;
 use Template::Stash;
 use base 'Oogly';
-use Data::Dumper;
-    $Data::Dumper::Terse = 1;
-    $Data::Dumper::Indent = 0;
+use Array::Unique;
+use Hash::Merge qw/merge/;
+use Data::Dumper::Concise;
 
 BEGIN {
     use Exporter();
@@ -64,17 +64,17 @@ BEGIN {
 {
     no warnings 'redefine';
     sub Oogly::setup {
-        my $class = shift;
-        my $params = shift;
-        my $self  = {};
-        bless $self, $class;
-        my $flds = $Oogly::FIELDS;
-        my $mixs = $Oogly::MIXINS;
-        $self->{params} = $params;
-        $self->{fields} = $flds;
-        $self->{mixins} = $mixs;
-        $self->{errors} = [];
-        $self->{templates}  = {
+    my $class = shift;
+    my $params = shift;
+    my $self  = {};
+    bless $self, $class;
+    my $flds = $Oogly::FIELDS;
+    my $mixs = $Oogly::MIXINS;
+    $self->{params} = $params;
+    $self->{fields} = $flds;
+    $self->{mixins} = $mixs;
+    $self->{errors} = [];
+    $self->{templates}  = {
             directory       => module_dir('Oogly::Aagly') . "/elements/",
             form            => "form.tt",
             input_checkbox   => "input_checkbox.tt",
@@ -87,126 +87,144 @@ BEGIN {
             select_multiple => "select_multiple.tt",
             textarea        => "textarea.tt",
         };
-        
-        # debugging - print Dumper($FIELDS); exit;
-        
-        # depreciated: 
-        # die "No valid parameters were found, parameters are required for validation"
-        #     unless $self->{params} && ref($self->{params}) eq "HASH";
-        
-        # validate mixin directives
-        foreach (keys %{$self->{mixins}}) {
-            $self->check_mixin($_, $self->{mixins}->{$_});
-        }
-        # validate field directives
-        foreach (keys %{$self->{fields}}) {
-            $self->check_field($_, $self->{fields}->{$_}) unless $_ eq 'errors';
-        }
-        # check for and process a mixin directive
-        foreach (keys %{$self->{fields}}) {
-            unless ($_ eq 'errors') {
-                $self->use_mixin($_, $self->{fields}->{$_}->{mixin})
-                    if $self->{fields}->{$_}->{mixin};
-            }
-        }
-        # check for and process a mixin_field directive
-        foreach (keys %{$self->{fields}}) {
-            unless ($_ eq 'errors') {
-                $self->use_mixin_field($self->{fields}->{$_}->{mixin_field}, $_)
-                    if $self->{fields}->{$_}->{mixin_field}
-                    && $self->{fields}->{$self->{fields}->{$_}->{mixin_field}};
-            }
-        }
-        # check for and process input filters
-        foreach (keys %{$self->{fields}}) {
-            unless ($_ eq 'errors') {
-                my $filters = [];
-                if (defined $self->{fields}->{$_}->{filters}) {
-                    $filters = $self->{fields}->{$_}->{filters};
-                }
-                if (defined $self->{fields}->{$_}->{filter}) {
-                    $filters = $self->{fields}->{$_}->{filter};
-                }
-                $filters = [$filters] unless ref($filters) eq "ARRAY";
-                foreach my $filter (@{$filters}) {
-                    if (defined $self->{params}->{$_}) {
-                        $self->basic_filter($filter, $_);
-                    }
-                }
-            }
-        }
-        return $self;
+    
+    # debugging - print Dumper($FIELDS); exit;
+    
+    # depreciated: 
+    # die "No valid parameters were found, parameters are required for validation"
+    #     unless $self->{params} && ref($self->{params}) eq "HASH";
+    
+    # validate mixin directives
+    foreach (keys %{$self->{mixins}}) {
+        $self->check_mixin($_, $self->{mixins}->{$_});
     }
+    # validate field directives and create filters arrayref if needed
+    foreach (keys %{$self->{fields}}) {
+        $self->check_field($_, $self->{fields}->{$_}) unless $_ eq 'errors';
+        unless ($_ eq 'errors') {
+            if (! defined $self->{fields}->{$_}->{filters}) {
+                $self->{fields}->{$_}->{filters} = [];
+            }
+        }
+    }
+    # check for and process a mixin directive
+    foreach (keys %{$self->{fields}}) {
+        unless ($_ eq 'errors') {
+            
+            $self->use_mixin($_, $self->{fields}->{$_}->{mixin})
+                if $self->{fields}->{$_}->{mixin};
+        }
+    }
+    # check for and process a mixin_field directive
+    foreach (keys %{$self->{fields}}) {
+        unless ($_ eq 'errors') {
+            
+            $self->use_mixin_field($self->{fields}->{$_}->{mixin_field}, $_)
+                if $self->{fields}->{$_}->{mixin_field}
+                && $self->{fields}->{$self->{fields}->{$_}->{mixin_field}};
+        }
+    }
+    # check for and process input filters and default values
+    foreach (keys %{$self->{fields}}) {
+        unless ($_ eq 'errors') {
+            
+            tie my @filters, 'Array::Unique';
+            @filters = @{$self->{fields}->{$_}->{filters}};
+            
+            if (defined $self->{fields}->{$_}->{filter}) {
+                push @filters, $self->{fields}->{$_}->{filter};
+                    delete $self->{fields}->{$_}->{filter};
+            }
+            
+            $self->{fields}->{$_}->{filters} = [@filters];
+            
+            foreach my $filter (@{$self->{fields}->{$_}->{filters}}) {
+                if (defined $self->{params}->{$_}) {
+                    $self->basic_filter($filter, $_);
+                }
+            }
+            
+            # default values
+            if (defined $self->{params}->{$_} && length($self->{params}->{$_}) == 0) {
+                if ($self->{fields}->{$_}->{value}) {
+                    $self->{params}->{$_} = $self->{fields}->{$_}->{value};
+                }
+            }
+        }
+    }
+    return $self;
 }
 
 {
     no warnings 'redefine';
     sub Oogly::check_mixin {
-        my ($self, $mixin, $spec) = @_;
-        
-        my $directives = {
-            required    => sub {1},
-            min_length  => sub {1},
-            max_length  => sub {1},
-            data_type   => sub {1},
-            ref_type    => sub {1},
-            regex       => sub {1},
-            element     => sub {1},
-            
-            filter      => sub {1},
-            filters     => sub {1},
-            
-        };
-        
-        foreach (keys %{$spec}) {
-            if (!defined $directives->{$_}) {
-                die "The `$_` directive supplied by the `$mixin` mixin is not supported";
-            }
-            if (!$directives->{$_}->()) {
-                die "The `$_` directive supplied by the `$mixin` mixin is invalid";
-            }
-        }
-        
-        return 1;
+	my ($self, $mixin, $spec) = @_;
+	
+	my $directives = {
+	    required    => sub {1},
+	    min_length  => sub {1},
+	    max_length  => sub {1},
+	    data_type   => sub {1},
+	    ref_type    => sub {1},
+	    regex       => sub {1},
+	    
+	    filter      => sub {1},
+	    filters     => sub {1},
+	    
+	    element     => sub {1},
+	    
+	};
+	
+	foreach (keys %{$spec}) {
+	    if (!defined $directives->{$_}) {
+		die "The `$_` directive supplied by the `$mixin` mixin is not supported";
+	    }
+	    if (!$directives->{$_}->()) {
+		die "The `$_` directive supplied by the `$mixin` mixin is invalid";
+	    }
+	}
+	
+	return 1;
     }
 }
 
 {
     no warnings 'redefine';
     sub Oogly::check_field {
-        my ($self, $field, $spec) = @_;
-        
-        my $directives = {
-            mixin       => sub {1},
-            mixin_field => sub {1},
-            validation  => sub {1},
-            errors      => sub {1},
-            label       => sub {1},
-            error       => sub {1},
-            value       => sub {1},
-            name        => sub {1},
-            filter      => sub {1},
-            filters     => sub {1},
-            element     => sub {1},
-            
-            required    => sub {1},
-            min_length  => sub {1},
-            max_length  => sub {1},
-            data_type   => sub {1},
-            ref_type    => sub {1},
-            regex       => sub {1},
-        };
-        
-        foreach (keys %{$spec}) {
-            if (!defined $directives->{$_}) {
-                die "The `$_` directive supplied by the `$field` field is not supported";
-            }
-            if (!$directives->{$_}->()) {
-                die "The `$_` directive supplied by the `$field` field is invalid";
-            }
-        }
-        
-        return 1;
+	my ($self, $field, $spec) = @_;
+	
+	my $directives = {
+	    mixin       => sub {1},
+	    mixin_field => sub {1},
+	    validation  => sub {1},
+	    errors      => sub {1},
+	    label       => sub {1},
+	    error       => sub {1},
+	    value       => sub {1},
+	    name        => sub {1},
+	    filter      => sub {1},
+	    filters     => sub {1},
+	    
+	    required    => sub {1},
+	    min_length  => sub {1},
+	    max_length  => sub {1},
+	    data_type   => sub {1},
+	    ref_type    => sub {1},
+	    regex       => sub {1},
+	    
+	    element 	=> sub {1},
+	};
+	
+	foreach (keys %{$spec}) {
+	    if (!defined $directives->{$_}) {
+		die "The `$_` directive supplied by the `$field` field is not supported";
+	    }
+	    if (!$directives->{$_}->()) {
+		die "The `$_` directive supplied by the `$field` field is invalid";
+	    }
+	}
+	
+	return 1;
     }
 }
 
@@ -223,20 +241,26 @@ BEGIN {
         $code .= "our \$FIELDS  = \$PACKAGE::fields = {}; ";
         $code .= "our \$MIXINS  = \$PACKAGE::mixins = {}; ";
         
-        while (my($key, $value) = each(%properties)) {
-            die "$key is not a supported property"
-                unless $key eq 'mixins' || $key eq 'fields';
-            if ($key eq 'mixins') {
-                while (my($key, $value) = each(%{$properties{mixins}})) {
-                    $code .= "mixin('" . $key . "'," . Dumper($value) . ");";
-                }
-            }
-            if ($key eq 'fields') {
-                while (my($key, $value) = each(%{$properties{fields}})) {
-                    $code .= "field('" . $key . "'," . Dumper($value) . ");";
-                }
-            }
-        } $code .= "1;";
+        # fix load priority mixin, then field
+	while (my($key, $value) = each(%properties)) {
+	    die "$key is not a supported property"
+		unless $key eq 'mixins' || $key eq 'fields';
+	    if ($key eq 'mixins') {
+		while (my($key, $value) = each(%{$properties{mixins}})) {
+		    $code .= "mixin('" . $key . "'," . Dumper($value) . ");";
+		}
+	    }
+	}
+	
+	while (my($key, $value) = each(%properties)) {
+	    die "$key is not a supported property"
+		unless $key eq 'mixins' || $key eq 'fields';
+	    if ($key eq 'fields') {
+		while (my($key, $value) = each(%{$properties{fields}})) {
+		    $code .= "field('" . $key . "'," . Dumper($value) . ");";
+		}
+	    }
+	} $code .= "1;";
         
         eval $code or die $@;
         return $PACKAGE;
@@ -246,6 +270,13 @@ BEGIN {
 
 sub render {
     my ($self, $name, $url, @fields) = @_;
+    my $form_vars = {};
+    
+    # check for form template vars
+    if (ref($fields[@fields]) eq "HASH") {
+	$form_vars = pop @fields;
+    }
+    
     my $counter = 0;
     my @form_parts = ();
     foreach my $field (@fields) {
@@ -286,7 +317,8 @@ sub render {
         name => $name,
         url => $url,
         form => $self,
-        content => join("\n", @form_parts)
+        content => join("\n", @form_parts),
+	vars => $form_vars
     };
     my $content;
     
@@ -331,11 +363,11 @@ __END__
 
 =head1 NAME
 
-Oogly::Aagly - A form building, processing and data validation system!
+Oogly::Aagly - A form building, processing and data validation system based on Oogly!
 
 =head1 VERSION
 
-version 0.03
+version 0.04
 
 =head1 SYNOPSIS
 
@@ -378,6 +410,8 @@ The following is an example of that...
 =head2 render
 
 The render method returns an html form using the supplied url, and fields.
+Additionally you can pass a hashref of key/value pairs as the last argument to
+render to include additional variables in the processing of the form.tt template.
 
 =head2 templates
 
@@ -626,7 +660,7 @@ More to come, try it for yourself...
 
 =head1 AUTHOR
 
-  Al Newkirk <awncorp@cpan.org>
+Al Newkirk <awncorp@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
