@@ -6,7 +6,7 @@ use strict;
 
 package goat;
 BEGIN {
-  $goat::VERSION = '0.04';
+  $goat::VERSION = '0.05';
 }
 use Oogly::Aagly ();
 use File::ShareDir ':ALL';
@@ -48,7 +48,7 @@ goat - Get Oogly-Aagly Templates
 
 =head1 VERSION
 
-version 0.04
+version 0.05
 
 =head1 METHODS
 

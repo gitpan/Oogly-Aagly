@@ -31,7 +31,7 @@ my %WriteMakefileArgs = (
     'Oogly' => '0.31',
     'Template' => '0'
   },
-  'VERSION' => '0.04',
+  'VERSION' => '0.05',
   'test' => {
     'TESTS' => 't/*.t'
   }

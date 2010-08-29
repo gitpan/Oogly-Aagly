@@ -1,5 +1,5 @@
     [% IF field.element.options %]
-        <label>[% IF field.label %][% field.label %][% ELSE %][% field.name %][% END %][% IF form.error(field.name) %] <br/> <span style="color:red;font-size:9px;">[% form.error(field.name).join(', ') %]</span>[% END %]</label>
+        <label>[% IF field.label %][% field.label %][% ELSE %][% field.name %][% END %][% IF form.error(field.name).size() %] <br/> <span style="color:red;font-size:9px;">[% form.error(field.name).join(', ') %]</span>[% END %]</label>
         [% IF form.params.$this %]
             [% FOREACH option IN field.element.options %]
                 [%IF form.params.$this == option.value %]
@@ -18,5 +18,5 @@
             [% END %]
         [% END %]
     [% ELSE %]
-    <input id="[% field.name %]" name="[% field.name %]" type="radio" value="[% form.params.$this || field.value %]" /> <label>[% IF field.label %][% field.label %][% ELSE %][% field.name %][% END %][% IF form.error(field.name) %] <br/> <span style="color:red;font-size:9px;">[% form.error(field.name).join(', ') %]</span>[% END %]</label>
+    <input id="[% field.name %]" name="[% field.name %]" type="radio" value="[% form.params.$this || field.value %]" /> <label>[% IF field.label %][% field.label %][% ELSE %][% field.name %][% END %][% IF form.error(field.name).size() %] <br/> <span style="color:red;font-size:9px;">[% form.error(field.name).join(', ') %]</span>[% END %]</label>
     [% END %]

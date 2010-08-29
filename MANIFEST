@@ -7,17 +7,6 @@ TODO
 aagly.kpf
 dist.ini
 eg/form.pl
-elements/form.tt
-elements/input_checkox.tt
-elements/input_file.tt
-elements/input_hidden.tt
-elements/input_image.tt
-elements/input_password.tt
-elements/input_radio.tt
-elements/input_text.tt
-elements/select.tt
-elements/select_multiple.tt
-elements/textarea.tt
 lib/Oogly/Aagly.pm
 lib/auto/Oogly/Aagly/elements/form.tt
 lib/auto/Oogly/Aagly/elements/input_checkbox.tt

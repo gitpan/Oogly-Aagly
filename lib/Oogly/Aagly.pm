@@ -1,6 +1,6 @@
 package Oogly::Aagly;
 BEGIN {
-  $Oogly::Aagly::VERSION = '0.04';
+  $Oogly::Aagly::VERSION = '0.05';
 }
 # ABSTRACT: A form building, processing and data validation system based on Oogly!
 
@@ -35,6 +35,7 @@ BEGIN {
         basic_filter
         Oogly
         render
+	render_control
         templates
         template
         tdir
@@ -64,95 +65,96 @@ BEGIN {
 {
     no warnings 'redefine';
     sub Oogly::setup {
-    my $class = shift;
-    my $params = shift;
-    my $self  = {};
-    bless $self, $class;
-    my $flds = $Oogly::FIELDS;
-    my $mixs = $Oogly::MIXINS;
-    $self->{params} = $params;
-    $self->{fields} = $flds;
-    $self->{mixins} = $mixs;
-    $self->{errors} = [];
-    $self->{templates}  = {
-            directory       => module_dir('Oogly::Aagly') . "/elements/",
-            form            => "form.tt",
-            input_checkbox   => "input_checkbox.tt",
-            input_file      => "input_file.tt",
-            input_hidden    => "input_hidden.tt",
-            input_password  => "input_password.tt",
-            input_radio     => "input_radio.tt",
-            input_text      => "input_text.tt",
-            select          => "select.tt",
-            select_multiple => "select_multiple.tt",
-            textarea        => "textarea.tt",
-        };
-    
-    # debugging - print Dumper($FIELDS); exit;
-    
-    # depreciated: 
-    # die "No valid parameters were found, parameters are required for validation"
-    #     unless $self->{params} && ref($self->{params}) eq "HASH";
-    
-    # validate mixin directives
-    foreach (keys %{$self->{mixins}}) {
-        $self->check_mixin($_, $self->{mixins}->{$_});
+	my $class = shift;
+	my $params = shift;
+	my $self  = {};
+	bless $self, $class;
+	my $flds = $Oogly::FIELDS;
+	my $mixs = $Oogly::MIXINS;
+	$self->{params} = $params;
+	$self->{fields} = $flds;
+	$self->{mixins} = $mixs;
+	$self->{errors} = [];
+	$self->{templates}  = {
+		directory       => module_dir('Oogly::Aagly') . "/elements/",
+		form            => "form.tt",
+		input_checkbox   => "input_checkbox.tt",
+		input_file      => "input_file.tt",
+		input_hidden    => "input_hidden.tt",
+		input_password  => "input_password.tt",
+		input_radio     => "input_radio.tt",
+		input_text      => "input_text.tt",
+		select          => "select.tt",
+		select_multiple => "select_multiple.tt",
+		textarea        => "textarea.tt",
+	    };
+	
+	# debugging - print Dumper($FIELDS); exit;
+	
+	# depreciated: 
+	# die "No valid parameters were found, parameters are required for validation"
+	#     unless $self->{params} && ref($self->{params}) eq "HASH";
+	
+	# validate mixin directives
+	foreach (keys %{$self->{mixins}}) {
+	    $self->check_mixin($_, $self->{mixins}->{$_});
+	}
+	# validate field directives and create filters arrayref if needed
+	foreach (keys %{$self->{fields}}) {
+	    $self->check_field($_, $self->{fields}->{$_}) unless $_ eq 'errors';
+	    unless ($_ eq 'errors') {
+		if (! defined $self->{fields}->{$_}->{filters}) {
+		    $self->{fields}->{$_}->{filters} = [];
+		}
+	    }
+	}
+	# check for and process a mixin directive
+	foreach (keys %{$self->{fields}}) {
+	    unless ($_ eq 'errors') {
+		
+		$self->use_mixin($_, $self->{fields}->{$_}->{mixin})
+		    if $self->{fields}->{$_}->{mixin};
+	    }
+	}
+	# check for and process a mixin_field directive
+	foreach (keys %{$self->{fields}}) {
+	    unless ($_ eq 'errors') {
+		
+		$self->use_mixin_field($self->{fields}->{$_}->{mixin_field}, $_)
+		    if $self->{fields}->{$_}->{mixin_field}
+		    && $self->{fields}->{$self->{fields}->{$_}->{mixin_field}};
+	    }
+	}
+	# check for and process input filters and default values
+	foreach (keys %{$self->{fields}}) {
+	    unless ($_ eq 'errors') {
+		
+		tie my @filters, 'Array::Unique';
+		@filters = @{$self->{fields}->{$_}->{filters}};
+		
+		if (defined $self->{fields}->{$_}->{filter}) {
+		    push @filters, $self->{fields}->{$_}->{filter};
+			delete $self->{fields}->{$_}->{filter};
+		}
+		
+		$self->{fields}->{$_}->{filters} = [@filters];
+		
+		foreach my $filter (@{$self->{fields}->{$_}->{filters}}) {
+		    if (defined $self->{params}->{$_}) {
+			$self->basic_filter($filter, $_);
+		    }
+		}
+		
+		# default values
+		if (defined $self->{params}->{$_} && length($self->{params}->{$_}) == 0) {
+		    if ($self->{fields}->{$_}->{value}) {
+			$self->{params}->{$_} = $self->{fields}->{$_}->{value};
+		    }
+		}
+	    }
+	}
+	return $self;
     }
-    # validate field directives and create filters arrayref if needed
-    foreach (keys %{$self->{fields}}) {
-        $self->check_field($_, $self->{fields}->{$_}) unless $_ eq 'errors';
-        unless ($_ eq 'errors') {
-            if (! defined $self->{fields}->{$_}->{filters}) {
-                $self->{fields}->{$_}->{filters} = [];
-            }
-        }
-    }
-    # check for and process a mixin directive
-    foreach (keys %{$self->{fields}}) {
-        unless ($_ eq 'errors') {
-            
-            $self->use_mixin($_, $self->{fields}->{$_}->{mixin})
-                if $self->{fields}->{$_}->{mixin};
-        }
-    }
-    # check for and process a mixin_field directive
-    foreach (keys %{$self->{fields}}) {
-        unless ($_ eq 'errors') {
-            
-            $self->use_mixin_field($self->{fields}->{$_}->{mixin_field}, $_)
-                if $self->{fields}->{$_}->{mixin_field}
-                && $self->{fields}->{$self->{fields}->{$_}->{mixin_field}};
-        }
-    }
-    # check for and process input filters and default values
-    foreach (keys %{$self->{fields}}) {
-        unless ($_ eq 'errors') {
-            
-            tie my @filters, 'Array::Unique';
-            @filters = @{$self->{fields}->{$_}->{filters}};
-            
-            if (defined $self->{fields}->{$_}->{filter}) {
-                push @filters, $self->{fields}->{$_}->{filter};
-                    delete $self->{fields}->{$_}->{filter};
-            }
-            
-            $self->{fields}->{$_}->{filters} = [@filters];
-            
-            foreach my $filter (@{$self->{fields}->{$_}->{filters}}) {
-                if (defined $self->{params}->{$_}) {
-                    $self->basic_filter($filter, $_);
-                }
-            }
-            
-            # default values
-            if (defined $self->{params}->{$_} && length($self->{params}->{$_}) == 0) {
-                if ($self->{fields}->{$_}->{value}) {
-                    $self->{params}->{$_} = $self->{fields}->{$_}->{value};
-                }
-            }
-        }
-    }
-    return $self;
 }
 
 {
@@ -194,6 +196,7 @@ BEGIN {
 	my ($self, $field, $spec) = @_;
 	
 	my $directives = {
+	    
 	    mixin       => sub {1},
 	    mixin_field => sub {1},
 	    validation  => sub {1},
@@ -213,6 +216,7 @@ BEGIN {
 	    regex       => sub {1},
 	    
 	    element 	=> sub {1},
+	    
 	};
 	
 	foreach (keys %{$spec}) {
@@ -300,7 +304,8 @@ sub render {
             url     => $url,
             form    => $self,
             field   => $tvars,
-            this    => $field
+            this    => $field,
+	    vars    => $form_vars
         };
         $form_parts[$counter] = '';
         $template->process($html, $args, \$form_parts[$counter]);
@@ -324,6 +329,48 @@ sub render {
     
     $template->process($html, $args, \$content);
     return $content;
+}
+
+
+sub render_control {
+    my ($self, @fields) = @_;
+    my $form_vars = {};
+    
+    # check for form template vars
+    if (ref($fields[@fields]) eq "HASH") {
+	$form_vars = pop @fields;
+    }
+    
+    my $counter = 0;
+    my @form_parts = ();
+    foreach my $field (@fields) {
+        $self->check_field($field);
+        die "The field `$field` does not have an element directive"
+            unless defined $self->{fields}->{$field}->{element};
+        my $template = Template->new(
+            INTERPOLATE => 1,
+	    EVAL_PERL   => 1,
+	    ABSOLUTE    => 1,
+	    ANYCASE     => 1
+        );
+        my $type = $self->{fields}->{$field}->{element}->{type};
+        my $html = $self->tdir($self->{templates}->{$type});
+           $html = $self->tdir($self->{fields}->{$field}->{element}->{template})
+            if defined $self->{fields}->{$field}->{element}->{template};
+        my $tvars = $self->{fields}->{$field};
+           $tvars->{name} = $field;
+        my $args = {
+            form    => $self,
+            field   => $tvars,
+            this    => $field,
+	    vars    => $form_vars
+        };
+        $form_parts[$counter] = '';
+        $template->process($html, $args, \$form_parts[$counter]);
+        $counter++;
+    }
+    
+    return @form_parts;
 }
 
 
@@ -367,7 +414,7 @@ Oogly::Aagly - A form building, processing and data validation system based on O
 
 =head1 VERSION
 
-version 0.04
+version 0.05
 
 =head1 SYNOPSIS
 
@@ -412,6 +459,26 @@ The following is an example of that...
 The render method returns an html form using the supplied url, and fields.
 Additionally you can pass a hashref of key/value pairs as the last argument to
 render to include additional variables in the processing of the form.tt template.
+
+    $self->render('form_name', '/form/action_url', @fields);
+    
+    # or pass additional vars to the form template via
+    $self->render('form_name', '/form/action_url', @fields, \%more_vars);
+    
+    # custom vars will be made available in the element templates via the var keyword
+    [% var.foo %]
+
+=head2 render_control
+
+The render_control method returns an html element using the specified field name.
+This is useful when you need to break out of the canned form rendering layout and
+prefer to render the form fields individually. The render_control method may be
+passed one or many form field names.
+
+    $self->render_control('field_name');
+    
+    # return multiple form elements as an array
+    $self->render_control(@fields);
 
 =head2 templates
 
